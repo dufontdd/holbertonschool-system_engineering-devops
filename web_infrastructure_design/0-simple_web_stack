@@ -1,0 +1,45 @@
+# Simple Web Stack Infrastructure Design
+
+## 1. Infrastructure Overview
+- User Request: The user types 'www.foobar.com' into their web browser.
+- DNS Resolution: The domain 'www.foobar.com' is configured with an 'A' record pointing to the server IP address '8.8.8.8'.
+- Connection: The user's computer communicates with the server using the TCP/IP protocol suite over HTTP (port 80) or HTTPS (port 443).
+- Single Server (8.8.8.8): Hosts the entire web stack including the Nginx web server, the application server, the application codebase, and the MySQL database.
+
+---
+
+## 2. Core Components Explained
+
+### What is a server
+A server is a physical machine or a virtual instance (VM) configured to run software that provides specific services, data, or resources to other computers (clients) over a network.
+
+### What is the role of the domain name
+A domain name provides a human-readable and memorable address (like foobar.com) as an alias for a numeric IP address (like 8.8.8.8), making it easy for users to find websites.
+
+### What type of DNS record www is in www.foobar.com
+The 'www' subdomain is typically configured as an A record (pointing directly to the IPv4 address 8.8.8.8) or a CNAME record (pointing to the root domain foobar.com).
+
+### What is the role of the web server
+Nginx acts as the web server. It handles incoming user HTTP/HTTPS requests, serves static files directly (HTML, CSS, images), manages SSL/TLS encryption, and acts as a reverse proxy by forwarding dynamic requests to the application server.
+
+### What is the role of the application server
+The application server executes the dynamic backend source code. It handles the application logic, processes user input, and communicates with the database to generate dynamic HTML or JSON responses.
+
+### What is the role of the database
+MySQL is the Relational Database Management System (RDBMS). Its role is to securely and structuredly store, manage, and retrieve persistent application data, such as user profiles, credentials, and content.
+
+### What the server is using to communicate with the user's computer
+The server uses the TCP/IP network protocol model, transmitting application data via the HTTP or HTTPS protocols over the internet.
+
+---
+
+## 3. Infrastructure Issues and Limitations
+
+### Single Point of Failure (SPOF)
+Since all components (Nginx, App, Database) live on one single machine, there is zero redundancy. If the server hardware fails, the network disconnects, or any critical process crashes, the entire website goes down immediately.
+
+### Downtime When Maintenance is Needed
+Any operational maintenance—such as deploying new application code, updating system packages, or modifying database schemas—requires restarting services or pausing the application. This causes unavoidable downtime for the users.
+
+### Cannot Scale
+This architecture can only scale vertically by adding more CPU, RAM, or storage to this single machine. Once the hardware limits are met, the server will crash or drop requests during high traffic spikes, as it cannot distribute the load across multiple servers.
