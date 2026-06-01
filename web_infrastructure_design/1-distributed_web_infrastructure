@@ -1,0 +1,47 @@
+# Distributed Web Infrastructure Design
+
+## 1. Infrastructure Overview
+- User Request: The user accesses 'www.foobar.com'.
+- Load Balancer (Server 1): Runs HAproxy. It receives all incoming traffic and distributes it to the application servers.
+- Application Servers (Server 2 and Server 3): Each runs Nginx as a web server, an application server, and holds a copy of the application codebase.
+- Database Cluster: Server 2 hosts the Primary (Master) MySQL database, while Server 3 hosts the Replica (Slave) MySQL database.
+
+---
+
+## 2. Core Components and Specifics
+
+### Why additional elements were added
+- Load Balancer (HAproxy): Added to balance incoming traffic across multiple servers, optimizing resource utilization and preventing server overload.
+- Second Application Server: Added to provide high availability and redundancy. If one server fails, the other can continue handling web traffic.
+- Primary-Replica Database Setup: Added to safeguard data integrity, provide data backups, and offload read queries to optimize performance.
+
+### Load Balancer Distribution Algorithm
+- Algorithm: Round Robin.
+- How it works: The load balancer distributes incoming client requests across the pool of available servers in a sequential, rotating order. Request 1 goes to Server 2, Request 2 goes to Server 3, Request 3 goes back to Server 2, and so forth.
+
+### Active-Active vs. Active-Passive Setup
+- Current Setup: Active-Active.
+- The Difference:
+  - Active-Active: Both backend servers are running simultaneously and actively processing requests forwarded by the load balancer. This architecture increases overall system capacity.
+  - Active-Passive: Only one server processes traffic while the other remains idle (in standby mode). The passive server only takes over if the active server experiences a failure.
+
+### Primary-Replica (Master-Slave) Database Cluster
+- How it works: The Primary node serves as the central authority for all data changes. When data is modified on the Primary, those transactions are asynchronously synchronized and copied over to the Replica node.
+- Difference regarding the Application:
+  - Primary Node: Handles all data modification requests, which are Write operations (INSERT, UPDATE, DELETE).
+  - Replica Node: Handles Read operations (SELECT queries). This separates the workload and speeds up data retrieval.
+
+---
+
+## 3. Infrastructure Issues and Limitations
+
+### Single Points of Failure (SPOF)
+- The Load Balancer: There is only one HAproxy instance. If this server goes down, the entire network traffic stops, making the website completely unreachable.
+- The Primary Database: If the Primary database crashes, the application can no longer perform any Write operations, breaking features like user registration or posts.
+
+### Security Issues
+- No Firewall: There is no security layer or firewall (like UFW or iptables) configured on the servers to block malicious ports or unauthorized network intrusions.
+- No HTTPS: Traffic is transmitted using unencrypted HTTP. All data transmitted between the user and the website is visible in plain text, exposing users to Man-in-the-Middle (MITM) attacks and data sniffing.
+
+### No Monitoring
+- The status and health of the servers (such as CPU load, memory utilization, or service failures) are not being monitored. If a component crashes, the infrastructure team will have no automated visibility or alerts to fix the issue.
