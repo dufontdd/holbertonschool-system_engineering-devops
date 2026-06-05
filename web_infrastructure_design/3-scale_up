@@ -1,26 +1,58 @@
-# Scale Up Infrastructure Design
+flowchart TD
 
-## 1. Infrastructure Overview
-- User Request: The user accesses 'www.foobar.com' over HTTPS.
-- Load Balancer Cluster: Consists of 2 HAproxy load balancers configured as a cluster (Active-Passive or Active-Active with a virtual IP) to eliminate the load balancer Single Point of Failure (SPOF).
-- Web Server Layer: A dedicated server running only the Nginx web server to handle incoming HTTP/HTTPS traffic and serve static files.
-- Application Server Layer: A dedicated server running only the application server and hosting the core codebase to execute business logic.
-- Database Layer: A dedicated server running only the MySQL database engine to manage data persistence.
+    USER[User Browser]
 
----
+    DNS[DNS<br>www.foobar.com → 8.8.8.8]
 
-## 2. Core Components and Specifics
+    FW1[Firewall]
 
-### Why additional elements were added and components were split
+    LB1[HAProxy LB1<br>HTTPS / SSL]
+    LB2[HAProxy LB2<br>HTTPS / SSL]
 
-#### 1. Adding a Second Load Balancer (HAproxy Cluster)
-- Why it was added: In the previous infrastructure, the single load balancer was a major Single Point of Failure (SPOF). If it crashed, the entire website went down. Adding a second HAproxy load balancer configured as a cluster ensures high availability. If the main load balancer fails, the secondary one immediately takes over the traffic without any service interruption.
+    MON1[Monitoring]
+    MON2[Monitoring]
+    MON3[Monitoring]
 
-#### 2. Splitting the Web Server (Nginx) onto its own server
-- Why it was added/split: By isolating Nginx on its own dedicated server, it no longer has to compete for resources with the application logic or the database. It can use 100% of the server's CPU, RAM, and network bandwidth to terminate SSL/TLS encryption, handle thousands of concurrent client connections, and serve static assets (images, CSS, JS) at maximum speed.
+    FW2[Firewall]
 
-#### 3. Splitting the Application Server onto its own server
-- Why it was added/split: The application server executes the dynamic backend source code, which is highly CPU-bound and memory-intensive. Moving it to its own dedicated machine prevents heavy code executions from slowing down web traffic or crashing the database. It also allows developers to scale the application layer horizontally (adding more app servers) independently of the other layers.
+    WEB1[Nginx Web Server 1]
+    WEB2[Nginx Web Server 2]
 
-#### 4. Splitting the Database (MySQL) onto its own server
-- Why it was added/split: Database management systems require massive amount of RAM and extremely fast Disk I/O operations. Isolating MySQL on its own server ensures that it has dedicated memory cache and disk performance to run complex queries smoothly. It also severely reduces the risk of data corruption, as an application crash or a web traffic spike cannot crash the database server.
+    APP1[Application Server 1]
+    APP2[Application Server 2]
+
+    FW3[Firewall]
+
+    DB1[(MySQL Primary)]
+    DB2[(MySQL Replica)]
+
+    USER --> DNS
+    DNS --> FW1
+
+    FW1 --> LB1
+    FW1 --> LB2
+
+    LB1 <--> LB2
+
+    LB1 --> WEB1
+    LB2 --> WEB2
+
+    WEB1 --> APP1
+    WEB2 --> APP2
+
+    APP1 --> FW3
+    APP2 --> FW3
+
+    FW3 --> DB1
+    FW3 --> DB2
+
+    DB1 -->|Replication| DB2
+
+    MON1 -. monitors .-> LB1
+    MON1 -. monitors .-> LB2
+
+    MON2 -. monitors .-> WEB1
+    MON2 -. monitors .-> WEB2
+
+    MON3 -. monitors .-> DB1
+    MON3 -. monitors .-> DB2
